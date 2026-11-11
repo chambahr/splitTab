@@ -1,0 +1,9 @@
+# SplitTrip, challenge write-up draft
+
+I built SplitTrip because organising a group trip often means chasing messages, remembering who paid, and doing settlement maths in a chat. SplitTrip brings the trip budget, shared expenses and a clear settle-up view into a small phone-first app. The home screen focuses on three questions: what is the budget, how much has been spent, and what expenses were added recently.
+
+Version 1 introduced trip creation, a planned budget, expense capture, equal allocation and suggested settlements. Money is calculated in integer minor units so rounding does not silently lose cents. Version 2 added expense categories and a backwards-compatible data migration. Existing trips and expenses receive safe defaults for new fields instead of being discarded. Version 3 added multiple trip participants, manual allocations and expense notes. Version 4 refined the manual-share validation and exposed saved state for regression checks.
+
+One issue was that the manual allocation form could retain a browser validation error after someone corrected the amounts. I clear that validation state as the field changes and added checks for valid allocations and totals that do not reconcile. The app also explains that suggested transfers are not actual payments.
+
+My honest feedback about CloudCrane is that publishing and version history made it quick to ship several iterations, and opening the app on a phone is straightforward. The screenshot and browser-test services were intermittently unavailable during this build, which slowed visual QA and automated proof. I have not presented the local prototype as a finished multi-user service. The Laravel/PostgreSQL API foundation still needs isolated database provisioning, a full PHPUnit run, deployment and connection to the phone UI. That boundary matters: private trips, email invitations and shared financial data need server-side authentication and authorization, not a public shared link.
