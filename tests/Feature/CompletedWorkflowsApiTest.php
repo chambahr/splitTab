@@ -79,14 +79,12 @@ final class CompletedWorkflowsApiTest extends TestCase
         $owner = User::factory()->create();
         $trip = Trip::create(['owner_id' => $owner->id, 'name' => 'Test trip', 'visibility' => 'public', 'location_mode' => 'city', 'timezone' => 'UTC', 'currency' => 'EUR', 'budget_minor' => 10000]);
         TripMember::create(['trip_id' => $trip->id, 'user_id' => $owner->id, 'role' => 'owner', 'status' => 'active', 'joined_at' => now()]);
-
         return [$owner, $trip];
     }
 
     private function expensePayload(User $owner, ?User $participant = null): array
     {
         $participant ??= $owner;
-
         return ['payer_id' => $owner->id, 'description' => 'Train tickets', 'category' => 'transport', 'amount_minor' => 1000, 'currency' => 'EUR', 'allocation_method' => 'equal', 'spent_at' => now()->toISOString(), 'participants' => [['user_id' => $participant->id]]];
     }
 }

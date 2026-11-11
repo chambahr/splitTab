@@ -18,3 +18,16 @@
 - [ ] Verify budget rollups, expense idempotency, expense edit/delete restrictions, settlement snapshots, confirmation, and payment reconciliation.
 - [ ] Verify audit-log immutability and restore from backup.
 - [ ] Complete privacy, security and operational review before inviting real users.
+
+## Final pre-staging verification
+
+1. Confirm the test process uses `splittrip_test`, never `splittrip_prod`.
+2. Run `composer test` and `composer lint` after every source change.
+3. Connect explicitly to `splittrip_test` and run `psql -v ON_ERROR_STOP=1 -d splittrip_test -f docs/postgres-integrity-checks.sql`.
+4. Confirm every required table exists, every listed constraint is validated, and the audit immutability trigger/function exist.
+5. Exercise password reset end to end: request token, reset once, verify old Sanctum tokens are revoked, verify token replay and expired token are rejected.
+6. Exercise private-trip OTP, invitation acceptance/revocation, role restrictions, expense allocation/idempotency, and settlement confirmation/payment recording with separate users.
+7. Verify email delivery through the configured production mail transport in staging, not by sending test messages to real users.
+8. Take a database backup and perform a restore drill before production migration.
+9. Deploy migrations only after reviewing `php artisan migrate --pretend` output against the intended production database. Then take a fresh backup and apply normal forward migrations during a controlled deployment window.
+10. Never run `migrate:fresh`, `db:wipe`, or PHPUnit against production.

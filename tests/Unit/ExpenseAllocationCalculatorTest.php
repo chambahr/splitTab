@@ -12,7 +12,7 @@ final class ExpenseAllocationCalculatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->calculator = new ExpenseAllocationCalculator;
+        $this->calculator = new ExpenseAllocationCalculator();
     }
 
     public function test_equal_allocation_distributes_every_minor_unit_deterministically(): void

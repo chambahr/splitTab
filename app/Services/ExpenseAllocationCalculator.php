@@ -12,8 +12,8 @@ use InvalidArgumentException;
 final class ExpenseAllocationCalculator
 {
     /**
-     * @param  array<int>|array<int,int>  $participants  Equal allocation accepts a list of IDs;
-     *                                                   other methods accept user ID => manual amount / basis points / weight.
+     * @param array<int>|array<int,int> $participants Equal allocation accepts a list of IDs;
+     *        other methods accept user ID => manual amount / basis points / weight.
      * @return array<int,int> user ID => allocated minor units
      */
     public function calculate(string $method, int $amountMinor, array $participants): array
@@ -32,7 +32,6 @@ final class ExpenseAllocationCalculator
             } else {
                 $weights = array_fill_keys(array_map('intval', array_keys($participants)), 1);
             }
-
             return $this->proportional($amountMinor, $weights);
         }
 
@@ -59,7 +58,6 @@ final class ExpenseAllocationCalculator
         if ($sum !== $amountMinor) {
             throw new InvalidArgumentException('Manual allocations must equal the expense amount.');
         }
-
         return $shares;
     }
 
@@ -69,7 +67,6 @@ final class ExpenseAllocationCalculator
         if (array_sum($basisPoints) !== 10000) {
             throw new InvalidArgumentException('Percentage allocations must total 10,000 basis points.');
         }
-
         return $this->proportional($amountMinor, $basisPoints, true);
     }
 
@@ -128,7 +125,7 @@ final class ExpenseAllocationCalculator
         $weights = [];
         foreach ($participants as $userId => $weight) {
             $id = filter_var($userId, FILTER_VALIDATE_INT);
-            if ($id === false || $id <= 0 || isset($weights[$id]) || ! is_int($weight)) {
+            if ($id === false || $id <= 0 || isset($weights[$id]) || !is_int($weight)) {
                 throw new InvalidArgumentException('Participant IDs and allocation values must be valid integers.');
             }
             $weights[$id] = $weight;
@@ -137,7 +134,6 @@ final class ExpenseAllocationCalculator
             throw new InvalidArgumentException('At least one participant is required.');
         }
         ksort($weights, SORT_NUMERIC);
-
         return $weights;
     }
 }

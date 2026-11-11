@@ -199,6 +199,14 @@ class TripMembershipApiTest extends TestCase
             'budget_minor' => 0,
         ]);
 
+        TripMember::create([
+            'trip_id' => $trip->id,
+            'user_id' => $owner->id,
+            'role' => 'owner',
+            'status' => 'active',
+            'joined_at' => now(),
+        ]);
+
         $membership = TripMember::create([
             'trip_id' => $trip->id,
             'user_id' => $formerAdmin->id,
@@ -206,9 +214,13 @@ class TripMembershipApiTest extends TestCase
             'status' => 'removed',
         ]);
 
-        $this->actingAs($formerAdmin)
+        $join = $this->actingAs($formerAdmin)
             ->postJson("/api/v1/trips/{$trip->id}/join")
             ->assertCreated();
+
+        $this->actingAs($owner)
+            ->postJson("/api/v1/trips/{$trip->id}/join-requests/{$join->json('id')}/approve")
+            ->assertOk();
 
         $this->assertDatabaseHas('trip_members', [
             'id' => $membership->id,

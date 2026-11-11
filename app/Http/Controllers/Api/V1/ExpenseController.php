@@ -61,13 +61,13 @@ final class ExpenseController
         }
 
         $activeMemberIds = $trip->members()->where('status', 'active')->pluck('user_id')->map(static fn ($id): int => (int) $id)->all();
-        if (! in_array((int) $data['payer_id'], $activeMemberIds, true)) {
+        if (!in_array((int) $data['payer_id'], $activeMemberIds, true)) {
             throw ValidationException::withMessages(['payer_id' => ['Payer must be an active trip member.']]);
         }
 
         $participantIds = array_map(static fn (array $participant): int => (int) $participant['user_id'], $data['participants']);
         foreach ($participantIds as $participantId) {
-            if (! in_array($participantId, $activeMemberIds, true)) {
+            if (!in_array($participantId, $activeMemberIds, true)) {
                 throw ValidationException::withMessages(['participants' => ['Every participant must be an active trip member.']]);
             }
         }
@@ -92,12 +92,11 @@ final class ExpenseController
             'allocation_method' => $method, 'spent_at' => $data['spent_at'], 'participants' => $data['participants'],
             'comment' => $data['comment'] ?? null,
         ], JSON_THROW_ON_ERROR));
-        $existing = ! empty($data['idempotency_key']) ? $trip->expenses()->where('idempotency_key', $data['idempotency_key'])->first() : null;
+        $existing = !empty($data['idempotency_key']) ? $trip->expenses()->where('idempotency_key', $data['idempotency_key'])->first() : null;
         if ($existing) {
-            if (! $existing->idempotency_fingerprint || ! hash_equals($existing->idempotency_fingerprint, $fingerprint)) {
+            if (!$existing->idempotency_fingerprint || !hash_equals($existing->idempotency_fingerprint, $fingerprint)) {
                 throw ValidationException::withMessages(['idempotency_key' => ['This idempotency key was already used with a different request.']]);
             }
-
             return response()->json($existing->load(['splits.user:id,name', 'payer:id,name']), 200);
         }
 
@@ -107,18 +106,10 @@ final class ExpenseController
                 $actorMembership = $lockedTrip->members()->where('user_id', $request->user()->id)->where('status', 'active')->lockForUpdate()->first();
                 abort_unless($actorMembership, 403);
                 abort_if($actorMembership->role === 'viewer', 403, 'Viewers cannot create expenses.');
-                if ($lockedTrip->visibility === TripVisibility::PRIVATE && (! $actorMembership->last_private_verified_at || $actorMembership->last_private_verified_at->lt(now()->subMinutes((int) config('splittrip.private_access_minutes', 30))))) {
-                    abort(423, 'Private-trip OTP required.');
-                }
+                if ($lockedTrip->visibility === TripVisibility::PRIVATE && (!$actorMembership->last_private_verified_at || $actorMembership->last_private_verified_at->lt(now()->subMinutes((int) config('splittrip.private_access_minutes', 30))))) abort(423, 'Private-trip OTP required.');
                 $activeIds = $lockedTrip->members()->where('status', 'active')->lockForUpdate()->pluck('user_id')->map(static fn ($id) => (int) $id)->all();
-                if (! in_array((int) $data['payer_id'], $activeIds, true)) {
-                    throw ValidationException::withMessages(['payer_id' => ['Payer must still be an active trip member.']]);
-                }
-                foreach ($data['participants'] as $participant) {
-                    if (! in_array((int) $participant['user_id'], $activeIds, true)) {
-                        throw ValidationException::withMessages(['participants' => ['Every participant must still be an active trip member.']]);
-                    }
-                }
+                if (!in_array((int) $data['payer_id'], $activeIds, true)) throw ValidationException::withMessages(['payer_id' => ['Payer must still be an active trip member.']]);
+                foreach ($data['participants'] as $participant) if (!in_array((int) $participant['user_id'], $activeIds, true)) throw ValidationException::withMessages(['participants' => ['Every participant must still be an active trip member.']]);
                 $lockedTrip->settlements()->where('status', 'proposed')->update(['status' => 'superseded']);
                 $expense = Expense::create([
                     'trip_id' => $trip->id,
@@ -146,7 +137,7 @@ final class ExpenseController
                     ]);
                 }
 
-                if (! empty($data['comment'])) {
+                if (!empty($data['comment'])) {
                     $expense->comments()->create(['user_id' => $request->user()->id, 'body' => $data['comment']]);
                 }
 
@@ -161,13 +152,12 @@ final class ExpenseController
         } catch (QueryException $exception) {
             // PostgreSQL marks a transaction failed after a unique violation. Resolve the
             // idempotency replay outside that transaction, never inside the failed one.
-            if (! empty($data['idempotency_key'])) {
+            if (!empty($data['idempotency_key'])) {
                 $existing = $trip->expenses()->where('idempotency_key', $data['idempotency_key'])->first();
                 if ($existing) {
-                    if (! $existing->idempotency_fingerprint || ! hash_equals($existing->idempotency_fingerprint, $fingerprint)) {
+                    if (!$existing->idempotency_fingerprint || !hash_equals($existing->idempotency_fingerprint, $fingerprint)) {
                         throw ValidationException::withMessages(['idempotency_key' => ['This idempotency key was already used with a different request.']]);
                     }
-
                     return response()->json($existing->load(['splits.user:id,name', 'payer:id,name']), 200);
                 }
             }
@@ -179,7 +169,6 @@ final class ExpenseController
     {
         $this->authorizeMember($request, $trip);
         abort_unless((int) $expense->trip_id === (int) $trip->id, 404);
-
         return response()->json($expense->load(['payer:id,name', 'splits.user:id,name', 'comments.user:id,name']));
     }
 
@@ -203,52 +192,30 @@ final class ExpenseController
             'participants.*.shares' => 'required_if:allocation_method,shares|integer|min:1|max:1000000',
             'participants.*.comment' => 'nullable|string|max:1000',
         ]);
-        if (strtoupper($data['currency']) !== strtoupper($trip->currency)) {
-            throw ValidationException::withMessages(['currency' => ['Expense currency must match the trip currency.']]);
-        }
+        if (strtoupper($data['currency']) !== strtoupper($trip->currency)) throw ValidationException::withMessages(['currency' => ['Expense currency must match the trip currency.']]);
         $activeIds = $trip->members()->where('status', 'active')->pluck('user_id')->map(fn ($id) => (int) $id)->all();
         $ids = array_map(fn ($p) => (int) $p['user_id'], $data['participants']);
-        if (! in_array((int) $data['payer_id'], $activeIds, true)) {
-            throw ValidationException::withMessages(['payer_id' => ['Payer must be an active trip member.']]);
-        }
-        foreach ($ids as $id) {
-            if (! in_array($id, $activeIds, true)) {
-                throw ValidationException::withMessages(['participants' => ['Every participant must be an active trip member.']]);
-            }
-        }
+        if (!in_array((int) $data['payer_id'], $activeIds, true)) throw ValidationException::withMessages(['payer_id' => ['Payer must be an active trip member.']]);
+        foreach ($ids as $id) if (!in_array($id, $activeIds, true)) throw ValidationException::withMessages(['participants' => ['Every participant must be an active trip member.']]);
         $input = match ($data['allocation_method']) {
             'equal' => $ids, 'manual' => $this->participantValues($data['participants'], 'share_minor'),
             'percentage' => $this->participantValues($data['participants'], 'percentage_basis_points'),
             'shares' => $this->participantValues($data['participants'], 'shares'),
         };
-        try {
-            $shares = $calculator->calculate($data['allocation_method'], (int) $data['amount_minor'], $input);
-        } catch (InvalidArgumentException $e) {
-            throw ValidationException::withMessages(['participants' => [$e->getMessage()]]);
-        }
-
+        try { $shares = $calculator->calculate($data['allocation_method'], (int) $data['amount_minor'], $input); }
+        catch (InvalidArgumentException $e) { throw ValidationException::withMessages(['participants' => [$e->getMessage()]]); }
         return DB::transaction(function () use ($request, $trip, $expense, $data, $shares, $audit) {
             $lockedTrip = Trip::whereKey($trip->id)->lockForUpdate()->firstOrFail();
             $actorMembership = $lockedTrip->members()->where('user_id', $request->user()->id)->where('status', 'active')->lockForUpdate()->first();
             abort_unless($actorMembership, 403);
             abort_if($actorMembership->role === 'viewer', 403, 'Viewers cannot edit expenses.');
             abort_unless((int) $expense->created_by === (int) $request->user()->id || in_array($actorMembership->role, ['owner', 'admin'], true), 403);
-            if ($lockedTrip->visibility === TripVisibility::PRIVATE && (! $actorMembership->last_private_verified_at || $actorMembership->last_private_verified_at->lt(now()->subMinutes((int) config('splittrip.private_access_minutes', 30))))) {
-                abort(423, 'Private-trip OTP required.');
-            }
+            if ($lockedTrip->visibility === TripVisibility::PRIVATE && (!$actorMembership->last_private_verified_at || $actorMembership->last_private_verified_at->lt(now()->subMinutes((int) config('splittrip.private_access_minutes', 30))))) abort(423, 'Private-trip OTP required.');
             $locked = Expense::whereKey($expense->id)->lockForUpdate()->firstOrFail();
             $activeIds = $lockedTrip->members()->where('status', 'active')->pluck('user_id')->map(fn ($id) => (int) $id)->all();
-            if (! in_array((int) $data['payer_id'], $activeIds, true)) {
-                throw ValidationException::withMessages(['payer_id' => ['Payer must still be an active trip member.']]);
-            }
-            foreach ($data['participants'] as $participant) {
-                if (! in_array((int) $participant['user_id'], $activeIds, true)) {
-                    throw ValidationException::withMessages(['participants' => ['Every participant must still be an active trip member.']]);
-                }
-            }
-            if ($locked->splits()->where('settled_minor', '>', 0)->exists() || $this->hasConfirmedSettlementSnapshot($locked)) {
-                throw ValidationException::withMessages(['expense' => ['Expenses included in confirmed settlement history cannot be changed.']]);
-            }
+            if (!in_array((int) $data['payer_id'], $activeIds, true)) throw ValidationException::withMessages(['payer_id' => ['Payer must still be an active trip member.']]);
+            foreach ($data['participants'] as $participant) if (!in_array((int) $participant['user_id'], $activeIds, true)) throw ValidationException::withMessages(['participants' => ['Every participant must still be an active trip member.']]);
+            if ($locked->splits()->where('settled_minor', '>', 0)->exists() || $this->hasConfirmedSettlementSnapshot($locked)) throw ValidationException::withMessages(['expense' => ['Expenses included in confirmed settlement history cannot be changed.']]);
             $before = ['amount_minor' => (int) $locked->amount_minor, 'payer_id' => (int) $locked->payer_id];
             $locked->update(['payer_id' => $data['payer_id'], 'description' => $data['description'], 'category' => $data['category'], 'amount_minor' => $data['amount_minor'], 'currency' => strtoupper($data['currency']), 'allocation_method' => $data['allocation_method'], 'spent_at' => $data['spent_at']]);
             $locked->splits()->delete();
@@ -258,7 +225,6 @@ final class ExpenseController
             }
             $lockedTrip->settlements()->where('status', 'proposed')->update(['status' => 'superseded']);
             $audit->record($lockedTrip, $request->user(), 'expense.updated', 'expense', (int) $locked->id, ['before' => $before, 'after_amount_minor' => (int) $locked->amount_minor]);
-
             return response()->json($locked->fresh()->load(['payer:id,name', 'splits.user:id,name']));
         });
     }
@@ -269,28 +235,20 @@ final class ExpenseController
         abort_unless((int) $expense->trip_id === (int) $trip->id, 404);
         abort_if($member->role === TripRole::VIEWER->value, 403, 'Viewers cannot delete expenses.');
         abort_unless((int) $expense->created_by === (int) $request->user()->id || in_array($member->role, ['owner', 'admin'], true), 403);
-        if ($expense->splits()->where('settled_minor', '>', 0)->exists() || $this->hasConfirmedSettlementSnapshot($expense)) {
-            throw ValidationException::withMessages(['expense' => ['This expense is part of confirmed settlement history and cannot be deleted.']]);
-        }
-
+        if ($expense->splits()->where('settled_minor', '>', 0)->exists() || $this->hasConfirmedSettlementSnapshot($expense)) throw ValidationException::withMessages(['expense' => ['This expense is part of confirmed settlement history and cannot be deleted.']]);
         return DB::transaction(function () use ($request, $trip, $expense, $audit) {
             $lockedTrip = Trip::whereKey($trip->id)->lockForUpdate()->firstOrFail();
             $actorMembership = $lockedTrip->members()->where('user_id', $request->user()->id)->where('status', 'active')->lockForUpdate()->first();
             abort_unless($actorMembership, 403);
             abort_if($actorMembership->role === 'viewer', 403, 'Viewers cannot delete expenses.');
             abort_unless((int) $expense->created_by === (int) $request->user()->id || in_array($actorMembership->role, ['owner', 'admin'], true), 403);
-            if ($lockedTrip->visibility === TripVisibility::PRIVATE && (! $actorMembership->last_private_verified_at || $actorMembership->last_private_verified_at->lt(now()->subMinutes((int) config('splittrip.private_access_minutes', 30))))) {
-                abort(423, 'Private-trip OTP required.');
-            }
+            if ($lockedTrip->visibility === TripVisibility::PRIVATE && (!$actorMembership->last_private_verified_at || $actorMembership->last_private_verified_at->lt(now()->subMinutes((int) config('splittrip.private_access_minutes', 30))))) abort(423, 'Private-trip OTP required.');
             $locked = Expense::whereKey($expense->id)->lockForUpdate()->firstOrFail();
             $id = (int) $locked->id;
-            if ($locked->splits()->where('settled_minor', '>', 0)->exists() || $this->hasConfirmedSettlementSnapshot($locked)) {
-                throw ValidationException::withMessages(['expense' => ['This expense is part of confirmed settlement history and cannot be deleted.']]);
-            }
+            if ($locked->splits()->where('settled_minor', '>', 0)->exists() || $this->hasConfirmedSettlementSnapshot($locked)) throw ValidationException::withMessages(['expense' => ['This expense is part of confirmed settlement history and cannot be deleted.']]);
             $locked->delete();
             $lockedTrip->settlements()->where('status', 'proposed')->update(['status' => 'superseded']);
             $audit->record($lockedTrip, $request->user(), 'expense.deleted', 'expense', $id, ['amount_minor' => (int) $locked->amount_minor]);
-
             return response()->noContent();
         });
     }
@@ -309,12 +267,11 @@ final class ExpenseController
     {
         $values = [];
         foreach ($participants as $participant) {
-            if (! array_key_exists($field, $participant)) {
+            if (!array_key_exists($field, $participant)) {
                 throw ValidationException::withMessages(['participants' => ["Each participant must provide {$field} for this allocation method."]]);
             }
             $values[(int) $participant['user_id']] = (int) $participant[$field];
         }
-
         return $values;
     }
 
@@ -324,7 +281,7 @@ final class ExpenseController
         abort_unless($member, 403);
 
         if ($trip->visibility === TripVisibility::PRIVATE
-            && (! $member->last_private_verified_at
+            && (!$member->last_private_verified_at
                 || $member->last_private_verified_at->lt(now()->subMinutes((int) config('splittrip.private_access_minutes', 30))))) {
             abort(423, 'Private-trip OTP required.');
         }
