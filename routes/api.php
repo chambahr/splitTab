@@ -1,36 +1,62 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\ExpenseController;
+use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\ExpenseCommentController;
+use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\SettlementController;
 use App\Http\Controllers\Api\V1\TripController;
+use App\Http\Controllers\Api\V1\TripMemberController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
+    Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->middleware('signed')->name('api.v1.verification.verify');
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/invitations/accept', [InvitationController::class, 'accept'])->middleware('throttle:10,1');
         Route::post('/private-access/verify', [InvitationController::class, 'verifyOtp'])->middleware('throttle:5,1');
         Route::post('/trips/{trip}/private-access/request', [InvitationController::class, 'requestOtp'])->middleware('throttle:3,1');
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::patch('/me', [AuthController::class, 'updateProfile']);
+        Route::post('/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:5,1');
+        Route::post('/email/verification-notification', [AuthController::class, 'sendVerification'])->middleware('throttle:3,1');
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/trips', [TripController::class, 'index']);
         Route::get('/trips/discover', [TripController::class, 'discover']);
         Route::post('/trips', [TripController::class, 'store']);
         Route::get('/trips/{trip}', [TripController::class, 'show']);
         Route::patch('/trips/{trip}', [TripController::class, 'update']);
+        Route::delete('/trips/{trip}', [TripController::class, 'destroy']);
         Route::post('/trips/{trip}/join', [TripController::class, 'join']);
         Route::delete('/trips/{trip}/leave', [TripController::class, 'leave']);
+        Route::get('/trips/{trip}/members', [TripMemberController::class, 'index']);
+        Route::patch('/trips/{trip}/members/{member}/role', [TripMemberController::class, 'updateRole']);
+        Route::delete('/trips/{trip}/members/{member}', [TripMemberController::class, 'remove']);
+        Route::post('/trips/{trip}/transfer-ownership', [TripMemberController::class, 'transferOwnership']);
         Route::post('/trips/{trip}/invitations', [InvitationController::class, 'store']);
+        Route::delete('/trips/{trip}/invitations/{invitation}', [InvitationController::class, 'revoke']);
         Route::get('/trips/{trip}/expenses', [ExpenseController::class, 'index']);
         Route::post('/trips/{trip}/expenses', [ExpenseController::class, 'store']);
+        Route::get('/trips/{trip}/expenses/{expense}', [ExpenseController::class, 'show']);
+        Route::put('/trips/{trip}/expenses/{expense}', [ExpenseController::class, 'update']);
+        Route::patch('/trips/{trip}/expenses/{expense}', [ExpenseController::class, 'update']);
+        Route::delete('/trips/{trip}/expenses/{expense}', [ExpenseController::class, 'destroy']);
+        Route::get('/budget-categories', [BudgetController::class, 'categories']);
+        Route::get('/trips/{trip}/budgets', [BudgetController::class, 'index']);
+        Route::post('/trips/{trip}/budgets', [BudgetController::class, 'store']);
+        Route::patch('/trips/{trip}/budgets/{budget}', [BudgetController::class, 'update']);
+        Route::delete('/trips/{trip}/budgets/{budget}', [BudgetController::class, 'destroy']);
         Route::get('/trips/{trip}/expenses/{expense}/comments', [ExpenseCommentController::class, 'index']);
         Route::post('/trips/{trip}/expenses/{expense}/comments', [ExpenseCommentController::class, 'store']);
         Route::get('/trips/{trip}/settlements', [SettlementController::class, 'index']);
         Route::post('/trips/{trip}/settlements/preview', [SettlementController::class, 'preview']);
         Route::post('/trips/{trip}/settlements', [SettlementController::class, 'store']);
+        Route::post('/trips/{trip}/settlements/{settlement}/confirm', [SettlementController::class, 'confirm']);
+        Route::post('/trips/{trip}/settlements/{settlement}/reject', [SettlementController::class, 'reject']);
+        Route::post('/trips/{trip}/settlements/{settlement}/transfers/{transfer}/paid', [SettlementController::class, 'markPaid']);
     });
 });

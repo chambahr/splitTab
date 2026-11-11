@@ -123,3 +123,23 @@ Send the Sanctum token as `Authorization: Bearer <token>`.
 - V3: local trip participants, equal/manual allocation and notes, with V2-to-V3 migration.
 
 The CloudCrane version history preserves previous app versions. If a release regresses, use its rollback action. The CloudCrane screenshot and browser test services returned transient upstream errors during this build, so visual review and browser-run test results are still pending. The PHP source has been syntax-checked, but PHPUnit could not be run in this environment because Composer and the PDO PostgreSQL driver are not installed.
+
+## Trip membership and ownership API
+
+All membership endpoints require Sanctum authentication. Private trips also require a recently verified private-trip OTP.
+
+| Method | Endpoint | Permission | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/v1/trips/{trip}/members` | Active member for private trips, public trip visibility for public trips | List active members. Public member data exposes only user ID and display name. |
+| PATCH | `/api/v1/trips/{trip}/members/{member}/role` | Owner | Set an active member's role to `admin`, `member`, or `viewer`. Ownership cannot be assigned through this endpoint. |
+| DELETE | `/api/v1/trips/{trip}/members/{member}` | Owner or admin | Mark a member as removed without deleting their historical records. Admins can remove only members and viewers. |
+| POST | `/api/v1/trips/{trip}/transfer-ownership` | Owner | Transfer ownership to an existing active member. The previous owner becomes an admin. |
+
+Role rules:
+
+- Owner controls role changes and ownership transfer.
+- Admin can remove regular members and viewers, but cannot remove admins or the owner.
+- Member and viewer roles cannot manage membership.
+- The owner cannot leave or be removed until ownership is transferred.
+- Membership changes are transactional and recorded in the trip audit log.
+- Removed membership rows are retained to preserve references and historical activity.

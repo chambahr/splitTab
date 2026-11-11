@@ -1,19 +1,18 @@
-# API implementation status and remaining work
+# Remaining API work and release gates
 
-This is an initial Laravel API codebase, not a production-certified fintech service. Before enabling real users, complete and test:
+This API now includes authentication and password recovery, trip management, public/private membership, invitation acceptance/revocation, private-trip OTP, budget CRUD, four expense allocation methods, expense update/delete, comments, settlement snapshots, settlement confirmation/payment recording, and audit logging.
 
-- Wire all models and migrations into a freshly installed Laravel 12 skeleton and run migrations against disposable PostgreSQL databases.
-- Add API request/response resources and consistent error envelopes.
-- Add verified-email registration, password reset, email change and account recovery.
-- Complete role-based authorization policies for every route, including viewer read-only behavior.
-- Add invitation deep-link handling in the CloudCrane client, revocation/resend, and invitation abuse controls.
-- Add OTP tests for expiration, resend invalidation, five-attempt cap, replay, and private access timeout.
-- Implement budget CRUD and category rollups. Budget tables/models exist, but no budget API controller is included yet.
-- Implement percentage and weighted-share allocations. The domain enum reserves the methods, but the expense endpoint currently implements equal and manual only.
-- Add expense update/delete with audit trail and settlement adjustment semantics.
-- Add settlement confirmation and payment evidence lifecycle, ensuring confirmed history is immutable.
-- Add concurrency/idempotency tests and PostgreSQL integration tests.
-- Add API integration in the CloudCrane app, member email invitations, private OTP UX, and public trip membership UX.
-- Add production monitoring, rate limiting, security review, privacy compliance and disaster recovery.
+The following work remains before production launch:
 
-No production database was created or modified by this build. No SMTP password, API key or production credential was supplied or stored.
+- Run the full PHPUnit unit and PostgreSQL feature suite on a host with `pdo_pgsql`, `dom`, `mbstring`, `xmlwriter`, and a reachable dedicated `splittrip_test` database.
+- Add explicit PostgreSQL concurrency tests for trip capacity, OTP attempts/resend, invitation acceptance, expense idempotency, and settlement confirmation/payment.
+- Add API Resources and standardize response/error envelopes and pagination contracts.
+- Add full account lifecycle features such as email change, account deletion/anonymization, data export, and recovery support.
+- Add stronger abuse monitoring and configurable rate limits for invitations, email verification, password reset, and OTP requests.
+- Connect the CloudCrane client to the API and test registration, invitation deep links, private OTP, multi-user sync, budgets, expense allocation, and settlement reconciliation end to end.
+- Verify SMTP deliverability and the configured frontend deep-link destination in the deployment environment.
+- Complete CORS, HTTPS, backups/restore, monitoring, retention, privacy, and operational security reviews.
+
+The settlement API records payments reported by users. It does not initiate bank, card, mobile-money, or cryptocurrency transfers. Confirmed settlement snapshots are preserved, and confirmed/completed expense items cannot be edited or deleted.
+
+No production database was modified as part of this source update. Do not treat syntax checks or calculation smoke scripts as a substitute for PostgreSQL integration testing.

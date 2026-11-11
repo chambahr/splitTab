@@ -138,11 +138,11 @@ return new class extends Migration
             $t->timestamps();
         });
 
-        DB::statement("
+        DB::statement('
             ALTER TABLE settlement_transfers
             ADD CONSTRAINT settlement_transfers_distinct_users_check
             CHECK (from_user_id <> to_user_id)
-        ");
+        ');
 
         Schema::create('audit_logs', function (Blueprint $t) {
             $t->id();
