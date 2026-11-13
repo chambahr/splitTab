@@ -3,10 +3,38 @@ namespace App\Models;
 use App\Enums\TripVisibility;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 class Trip extends Model
 {
     use SoftDeletes;
     protected $fillable=['owner_id','name','description','visibility','location_mode','destination','start_at','end_at','timezone','currency','budget_minor','participant_limit','status','trip_type','city_id','photo_path'];
+    protected $appends = ['photo_url'];
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        $path = $this->photo_path;
+
+        if (! is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        // Keep legacy absolute URLs working while normalising stored disk paths.
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
+
+        $path = ltrim($path, '/');
+
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, strlen('storage/'));
+        }
+
+        $url = Storage::disk('public')->url($path);
+
+        // Ensure API clients always receive an absolute URL, even if the disk URL
+        // is configured as a relative path. APP_URL must match the public API host.
+        return preg_match('#^https?://#i', $url) ? $url : url($url);
+    }
     protected function casts(): array { return ['visibility'=>TripVisibility::class,'start_at'=>'immutable_datetime','end_at'=>'immutable_datetime','budget_minor'=>'integer','participant_limit'=>'integer']; }
     public function owner(){return $this->belongsTo(User::class,'owner_id');}
     public function city(){return $this->belongsTo(City::class);}

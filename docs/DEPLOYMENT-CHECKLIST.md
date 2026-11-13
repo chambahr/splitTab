@@ -11,6 +11,8 @@
 - [ ] Install PHP extensions including `pdo_pgsql`, `mbstring`, `dom`, `xml`, and `xmlwriter`.
 - [ ] Run PHPUnit only against isolated `splittrip_test`, with production credentials unavailable to the test process.
 - [ ] Configure backups and restore drill.
+- [ ] Set `APP_URL=https://api.tiptrip.online`, run `php artisan storage:link`, and verify `public/storage` resolves to `storage/app/public`.
+- [ ] Upload a real trip photo, then verify its returned `photo_url` loads anonymously with HTTP 200 and an image content type.
 - [ ] Connect CloudCrane UI to API using a public API base URL and Sanctum bearer tokens.
 - [ ] Remove local-only prototype mode only after API integration tests pass.
 - [ ] Test public/private data isolation with two separate accounts.

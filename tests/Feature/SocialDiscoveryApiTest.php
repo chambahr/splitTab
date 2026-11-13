@@ -24,6 +24,35 @@ final class SocialDiscoveryApiTest extends TestCase
         $this->getJson('/api/v1/public/trips/'.$trip->id)->assertOk()->assertJsonPath('host.username','host_one');
     }
 
+    public function test_public_trip_list_and_detail_return_absolute_photo_urls(): void
+    {
+        $city = City::query()->firstOrFail();
+        $owner = User::factory()->create();
+        $trip = Trip::create([
+            'owner_id' => $owner->id,
+            'name' => 'Photo trip',
+            'description' => 'A public trip that has a saved cover photo.',
+            'visibility' => 'public',
+            'location_mode' => 'city',
+            'timezone' => 'Africa/Douala',
+            'currency' => 'XAF',
+            'budget_minor' => 50000,
+            'trip_type' => 'event',
+            'city_id' => $city->id,
+            'photo_path' => 'trips/photo-trip.jpg',
+        ]);
+
+        $expectedUrl = rtrim(config('app.url'), '/') . '/storage/trips/photo-trip.jpg';
+
+        $this->getJson('/api/v1/public/trips')
+            ->assertOk()
+            ->assertJsonPath('data.0.photo_url', $expectedUrl);
+
+        $this->getJson('/api/v1/public/trips/' . $trip->id)
+            ->assertOk()
+            ->assertJsonPath('photo_url', $expectedUrl);
+    }
+
     public function test_private_trip_is_not_exposed_by_public_endpoints(): void
     {
         $owner = User::factory()->create();

@@ -75,9 +75,7 @@ final class PublicTripController
             'visibility' => TripVisibility::PUBLIC->value,
             'destination' => $trip->destination,
             'city' => $trip->city,
-            'photo_url' => $trip->photo_path
-                ? asset('storage/' . $trip->photo_path)
-                : null,
+            'photo_url' => $trip->photo_url,
             'start_at' => $trip->start_at,
             'end_at' => $trip->end_at,
             'currency' => $trip->currency,
